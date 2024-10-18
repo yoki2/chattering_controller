@@ -22,7 +22,7 @@
 
 プログラム上での表示にはimgタグ単体でassetの画像を指定する。
 なお、imgタグ単体のasset画像はブラウザ表示では画像無し枠が出てしまうので、
-altで空白スペース1文字に置き換わるようにしておく。
+imgタグのsrcsetで透過色のみ画像を仮表示させておく。
 
 通常の表示にはpictureタグで、sourceタグは使用せずにimgタグで画像を表示する。
 
@@ -32,9 +32,9 @@ imgタグ単体のasset画像は表示される。
 
 ※通常の使用方法と異なるので、flutter_htmlの更新で使えなくなる可能性あり
 -->
-<img src="asset:assets/ss.png" alt=" " width="300" height="400">
+<img src="asset:assets/ss.png" srcset="assets/space.png" alt="" width="25%">
 <picture>
-<img src="assets/ss.png" alt="ss" width="300" height="400">
+<img src="assets/ss.png" alt="ss" width="50%">
 </picture>
 
 Controls mouse chattering.
@@ -119,9 +119,9 @@ For example, it won't work on 32-bit OS.
 ---
 # Usage
 
-<img src="asset:assets/usage.png" alt=" " width="285" height="220">
+<img src="asset:assets/usage.png" srcset="assets/space.png" alt="" width="25%">
 <picture>
-<img src="assets/usage.png" alt="usage" width="285" height="220">
+<img src="assets/usage.png" alt="usage" width="50%">
 </picture>
 
 Select the checkbox and press the "設定適用" button to start controlling the corresponding click event.<br>
