@@ -256,6 +256,25 @@ The operation verification period was long because trial and error was repeated 
 <br>
 
 ---
+# Update history
+
+## v1.0.1 (24/10/30)
+Fixed a bug at "startup"<br>
+(UAC operation confirmation was insufficient.)<br>
+<br>
+「スタートアップ」時のバグを修正<br>
+(UACの動作確認が不十分でした。)<br>
+
+<br>
+
+## v1.0.0 (24/10/18)
+First public release<br>
+<br>
+初公開<br>
+
+<br>
+
+---
 # Author
 
 * yoki

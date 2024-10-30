@@ -3,7 +3,7 @@
 // new 24/05/03 yoki
 //--------------------------------------------------------------------------------
 import 'dart:collection';
-import 'dart:io' show Platform;
+import 'dart:io' show Directory, File, Platform, Process, ProcessResult;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -13,7 +13,9 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:system_tray/system_tray.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:win32_registry/win32_registry.dart';
+//import 'package:win32_registry/win32_registry.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:xml/xml.dart';
 
 // このアプリで使用する設定や別画面等
 import 'main_constants.dart'; // Widgetの表示内容やサイズ等の定数
@@ -104,6 +106,7 @@ class _MyHomePageState extends State<MyHomePage>
 {
   //----------------------------------------
   // 初期化処理
+  static const isRelease = bool.fromEnvironment('dart.vm.product'); // ビルド種別の確認
   bool _buildInitFlg = false; // build初期化フラグ
   @override
   void initState() {
@@ -115,7 +118,7 @@ class _MyHomePageState extends State<MyHomePage>
     windowManager.addListener(this); // (window_manager)リスナーの追加
     _initSystemTray(); // (system_tray)システムトレイ関連の初期化
     _initAppData(); // (shared_preferences)アプリの設定データ関連の初期化
-    _initStartup(); // (win32_registry)スタートアップ関連の確認の初期化
+    _initStartup(); // (Process.runSync)スタートアップ関連の確認の初期化
 
     // (pigeon)ネイティブからFlutter呼び出し用の初期化
     messages.MessageFlutterApi.setUp(this);
@@ -395,6 +398,121 @@ class _MyHomePageState extends State<MyHomePage>
   //----------------------------------------
 
   //----------------------------------------
+  // Process.runSync関連 24/10/29 yoki
+  // (Process.runSync)スタートアップ関連処理
+  bool startupFlg = false;
+
+  late Directory appCacheDirectory;
+  late File schtasksXMLFile;
+
+  static const String schtasksCommand = 'schtasks';
+
+  // スタートアップタスク削除
+  static const schtasksDelete = [
+    '/delete',
+    '/F',
+    '/TN',
+    MainConstants.schtasksName,
+  ];
+
+  // スタートアップタスク有無判定用
+  static const schtasksQuery = [
+    '/query',
+    '/FO',
+    'CSV',
+    '/NH',
+    '/TN',
+    MainConstants.schtasksName,
+  ];
+
+  // (Process.runSync)初期化処理
+  void _initStartup() async {
+    try {
+      // アプリのキャッシュフォルダパスの取得
+      appCacheDirectory = await getApplicationCacheDirectory();
+
+      // スタートアップタスク用XMLファイルの保存先(元ファイルとは別に保存する)
+      schtasksXMLFile =
+          File('${appCacheDirectory.path}/${MainConstants.schtasksXMLPath}');
+    } catch (e) {
+      throw Exception(e);
+    }
+
+    // スタートアップタスク有無判定
+    startupFlg = _checkStartup();
+  }
+
+  // XMLファイルからスタートアップタスク作成
+  void _createStartupTask() async {
+    try {
+      // スタートアップタスク用XMLファイルの読み込み
+      // アプリ配布の際はassetsフォルダの位置が異なるので分けておく
+      final xmlFile = File(isRelease
+          ? MainConstants.releaseAssetsPath + MainConstants.schtasksXMLPath
+          : MainConstants.debugAssetsPath + MainConstants.schtasksXMLPath);
+
+      // XMLデータの読み込み(ファイル有無判定はassetsからの読み込みなので省略)
+      final xmlDoc = XmlDocument.parse(xmlFile.readAsStringSync());
+
+      // アプリの実行パスを設定
+      final xmlCommand = xmlDoc.findAllElements('Command');
+
+      // パスに空白が含まれるとパラメーターと認識されてしまうので""で囲む
+      xmlCommand.first.innerText = '"${Platform.resolvedExecutable}"';
+
+      // スタートアップタスク用XMLファイルの保存
+      if (await schtasksXMLFile.exists()) {
+        schtasksXMLFile.create();
+      }
+      schtasksXMLFile.writeAsString(xmlDoc.toXmlString());
+
+      Process.runSync(schtasksCommand, [
+        '/create',
+        '/F',
+        '/TN',
+        MainConstants.schtasksName,
+        '/XML',
+        schtasksXMLFile.path
+      ]);
+    } catch (e) {
+      throw Exception(e);
+    }
+  }
+
+  // スタートアップ有効無効確認
+  bool _checkStartup() {
+    // スタートアップタスク有無判定
+    ProcessResult result = Process.runSync(schtasksCommand, schtasksQuery);
+
+    // result.exitCode = OK:0, Error:0以外
+    if (result.exitCode == 0) {
+      // 念の為、スタートアップタスクを設定しなおす
+      _createStartupTask();
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  // スタートアップ有効無効設定
+  void _setStartupFlg(bool flg) {
+    if (flg) {
+      // 念の為、スタートアップタスクを設定しなおす
+      _createStartupTask();
+    } else {
+      // スタートアップタスクを削除
+      Process.runSync(schtasksCommand, schtasksDelete);
+    }
+
+    setState(() {
+      startupFlg = flg;
+      startupCheckbox.setCheck(startupFlg);
+    });
+  }
+  //----------------------------------------
+
+/*
+  //----------------------------------------
   // win32_registry関連
   // (win32_registry)スタートアップ関連処理
   bool startupFlg = false;
@@ -504,6 +622,7 @@ class _MyHomePageState extends State<MyHomePage>
     });
   }
   //----------------------------------------
+*/
 
   //----------------------------------------
   // サイドナビゲーションメニュー(drawer)の「About」選択時の処理

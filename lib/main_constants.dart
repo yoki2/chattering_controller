@@ -33,6 +33,12 @@ class MainConstants {
   static const String systrayStartup = 'スタートアップ起動設定';
   static const String systrayDestroy = '終了';
 
+  // schtasks用
+  static const String schtasksName = 'StartUp_Chattering_Controller';
+  static const String releaseAssetsPath = 'data/flutter_assets/assets/';
+  static const String debugAssetsPath = 'assets/';
+  static const String schtasksXMLPath = 'StartUp_Chattering_Controller.xml';
+
   // アプリ終了確認
   static const Text closeTitle = Text(
     '終了しますか?',
